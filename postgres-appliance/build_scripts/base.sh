@@ -180,6 +180,10 @@ for version in $DEB_PG_SUPPORTED_VERSIONS; do
             "${EXTRA_EXTENSIONS[@]}"; do
         make -C "$n" USE_PGXS=1 clean install-strip
     done
+
+############################################################
+    sh ./install_pgh3.sh ${version} ${PGVERSION}
+############################################################
 done
 
 apt-get install -y skytools3-ticker pgbouncer
@@ -194,7 +198,9 @@ done
 if [ "$DEMO" != "true" ]; then
     for version in $DEB_PG_SUPPORTED_VERSIONS; do
         # create postgis symlinks to make it possible to perform update
-        ln -s "postgis-${POSTGIS_VERSION%.*}.so" "/usr/lib/postgresql/${version}/lib/postgis-2.5.so"
+        if [ ! -f "/usr/lib/postgresql/${version}/lib/postgis-2.5.so" ]; then
+            ln -s "postgis-${POSTGIS_VERSION%.*}.so" "/usr/lib/postgresql/${version}/lib/postgis-2.5.so"
+        fi
     done
 fi
 

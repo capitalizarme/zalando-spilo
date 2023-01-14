@@ -41,6 +41,7 @@ COPY --from=ubuntu-18 /usr/lib/locale/locale-archive /usr/lib/locale/locale-arch
 
 COPY cron_unprivileged.c dependencies/src /builddeps/
 COPY build_scripts/base.sh /builddeps/
+COPY build_scripts/install_pgh3.sh /builddeps/
 COPY --from=dependencies-builder /builddeps/*.deb /builddeps/
 
 ARG PGVERSION
