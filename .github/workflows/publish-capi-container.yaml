@@ -6,7 +6,7 @@ on: [push]
 
 env:
   repo: zalando-spilo
-  testbranch: pgh3
+  testbranch: gph3
   ok: OK
 
 jobs:
