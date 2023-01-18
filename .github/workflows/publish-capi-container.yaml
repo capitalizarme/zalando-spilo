@@ -78,7 +78,7 @@ jobs:
         REPOTAG: ${{ steps.deploy.outputs.tag }}
         LATEST: ${{ steps.deploy.outputs.latest }}
       run: |
-        docker build -t $ECR_REPOSITORY .
+        docker build -t $ECR_REPOSITORY postgres-appliance
         docker tag $ECR_REPOSITORY:latest $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST
         docker tag $ECR_REPOSITORY:latest $ECR_REGISTRY/$ECR_REPOSITORY:$REPOTAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST
