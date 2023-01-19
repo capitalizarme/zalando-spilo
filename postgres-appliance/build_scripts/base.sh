@@ -164,6 +164,10 @@ for version in $DEB_PG_SUPPORTED_VERSIONS; do
             "${EXTRA_EXTENSIONS[@]}"; do
         make -C "$n" USE_PGXS=1 clean install-strip
     done
+
+############################################################
+    sh ./install_pgh3.sh ${version} ${PGVERSION}
+############################################################
 done
 
 apt-get install -y skytools3-ticker pgbouncer
