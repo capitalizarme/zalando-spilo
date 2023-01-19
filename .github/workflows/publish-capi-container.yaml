@@ -105,30 +105,3 @@ jobs:
         ESTADO=$?
         echo $ESTADO
         echo "test=$ESTADO" >> $GITHUB_OUTPUT
-
-    - if: ${{ steps.deploy.outputs.k8s == env.ok }}
-      name: Deploy to EKS
-      uses: RAcl/kube@main
-      env:
-        KUBE_CONFIG: ${{ secrets.STAGING_KUBE_CONFIG_DATA }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: ${{ secrets.STAGING_AWS_REGION }}
-        K8S_DEPLOY: ${{ secrets.STAGING_DEPLOY }}
-        K8S_NS: ${{ secrets.STAGING_NS }}
-        IMAGE: ${{ steps.build-image.outputs.IMAGE }}
-      with:
-        args: set image deployment.apps/${K8S_DEPLOY} ${K8S_DEPLOY}=${IMAGE} -n ${K8S_NS}
-
-    - if: ${{ steps.deploy.outputs.k8s == env.ok }}
-      name: Verify deploy on EKS
-      uses: RAcl/kube@main
-      env:
-        KUBE_CONFIG: ${{ secrets.STAGING_KUBE_CONFIG_DATA }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: ${{ secrets.STAGING_AWS_REGION }}
-        K8S_DEPLOY: ${{ secrets.STAGING_DEPLOY }}
-        K8S_NS: ${{ secrets.STAGING_NS }}
-      with:
-        args: rollout status deployment.apps/${K8S_DEPLOY} -n ${K8S_NS}
