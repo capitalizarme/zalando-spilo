@@ -1,0 +1,99 @@
+name: Publish multiarch images on capi
+on: [push]
+  # push:
+  #   tags:
+  #     - 'pgh3-*'
+
+env:
+  repo: zalando-spilo
+  testbranch: pgh3
+  ok: OK
+
+jobs:
+  publish:
+    name: Build and push Spilo multiarch images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      packages: 'write'
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.7
+
+    - name: Install flake8 and docker-compose
+      run: python -m pip install flake8 docker-compose==1.17.1
+
+    - name: Get tag deploy version
+      id: deploy
+      env:
+        branch: ${{ env.testbranch }}
+      run: |
+        echo "refs:"${GITHUB_REF#refs/*/}
+        echo "brch:"$branch
+        TAG_VER=${GITHUB_REF#refs/*/}
+        K8S="NO"
+        Continue="NO"
+        if [ "${TAG_VER}" = "${branch}" ]; then
+          LTST="latest-staging"
+          TAG_VER="rc-"$(echo ${GITHUB_SHA} | cut -c1-10)
+          K8S=${{ env.ok }}
+          Continue=${{ env.ok }}
+        elif [ -n "$(echo ${TAG_VER} | egrep ^'pgh3-[0-9]+\.[0-9]+\.[0-9]+')" ]; then
+          LTST="latest"
+          Continue=${{ env.ok }}
+        fi
+        echo "Tag Deploy Version:: \n-- tag=${TAG_VER} \n-- latest=${LTST} \n-- k8s=${K8S} \n-- Continue=${Continue}"
+        echo "tag=${TAG_VER}" >> $GITHUB_OUTPUT
+        echo "latest=${LTST}" >> $GITHUB_OUTPUT
+        echo "k8s=${K8S}" >> $GITHUB_OUTPUT
+        echo "continue=${Continue}" >> $GITHUB_OUTPUT
+
+    - if: ${{ steps.deploy.outputs.Continue == env.ok }}
+      name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - if: ${{ steps.deploy.outputs.Continue == env.ok }}
+      name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - if: ${{ steps.deploy.outputs.Continue == env.ok }}
+      name: Build and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ env.repo }}
+        REPOTAG: ${{ steps.deploy.outputs.tag }}
+        LATEST: ${{ steps.deploy.outputs.latest }}
+      run: |
+        docker build -t $ECR_REPOSITORY postgres-appliance
+        docker tag $ECR_REPOSITORY:latest $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST
+        docker tag $ECR_REPOSITORY:latest $ECR_REGISTRY/$ECR_REPOSITORY:$REPOTAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$LATEST
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$REPOTAG
+        IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$REPOTAG
+        echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
+        echo "NAME=$IMAGE" >> $GITHUB_OUTPUT
+
+    - if: ${{ steps.deploy.outputs.k8s == env.ok }}
+      name: Test spilo docker image
+      id: test-image
+      env:
+        SPILO_IMAGE: "${{ steps.build-image.outputs.NAME }}"
+      run: |
+        bash postgres-appliance/tests/test_spilo.sh
+        ESTADO=$?
+        echo $ESTADO
+        echo "test=$ESTADO" >> $GITHUB_OUTPUT
