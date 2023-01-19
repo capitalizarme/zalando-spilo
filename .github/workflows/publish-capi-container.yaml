@@ -88,14 +88,6 @@ jobs:
         echo "NAME=$IMAGE" >> $GITHUB_OUTPUT
 
     - if: ${{ steps.deploy.outputs.k8s == env.ok }}
-      name: Build and export to local docker for testing
-      uses: docker/build-push-action@v3
-      with:
-        context: "postgres-appliance/"
-        load: true
-        tags: ${{ steps.build-image.outputs.NAME }}
-
-    - if: ${{ steps.deploy.outputs.k8s == env.ok }}
       name: Test spilo docker image
       id: test-image
       env:
