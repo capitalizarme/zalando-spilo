@@ -67,7 +67,8 @@ apt-get install -y \
     brotli \
     libbrotli1 \
     python3.10 \
-    python3-psycopg2
+    python3-psycopg2 \
+    pgxnclient # h3-pg installer
 
 # forbid creation of a main cluster when package is installed
 sed -ri 's/#(create_main_cluster) .*$/\1 = false/' /etc/postgresql-common/createcluster.conf
@@ -167,6 +168,12 @@ for version in $DEB_PG_SUPPORTED_VERSIONS; do
 
 ############################################################
     sh ./install_pgh3.sh ${version} ${PGVERSION}
+    echo "## Working version: ${version} ##"
+    if [ 11 -eq ${version} ]; then
+        pgxn install 'h3=3.5.0'
+    else
+        pgxn install 'h3=4.1.3'
+    fi
 ############################################################
 done
 
